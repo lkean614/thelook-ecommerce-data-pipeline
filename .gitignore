@@ -1,0 +1,14 @@
+# Ignore raw and processed data
+dataset/raw/*
+dataset/processed/*
+*.csv
+*.parquet
+
+# Ignore Python caches and environments
+__pycache__/
+*.pyc
+.env
+venv/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
