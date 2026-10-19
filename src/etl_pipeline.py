@@ -441,7 +441,8 @@ def build_marts():
             DATE_DIFF('minute', MIN(event_created_at), MAX(event_created_at)) AS session_duration_minutes,
             COUNT(event_id) AS total_page_views,
             SUM(CASE WHEN event_type IN ('product', 'cart', 'department') THEN 1 ELSE 0 END) AS high_intent_clicks,
-            MAX(CASE WHEN event_type = 'purchase' THEN 1 ELSE 0 END) AS is_purchase_session
+            MAX(CASE WHEN event_type = 'purchase' THEN 1 ELSE 0 END) AS is_purchase_session,
+            MAX(CASE WHEN event_type = 'purchase' THEN event_created_at ELSE NULL END) AS purchase_event_time
         FROM '../dataset/processed/Frontend_Traffic_OBT.parquet'
         GROUP BY session_id
     ),
@@ -450,6 +451,7 @@ def build_marts():
             session_id,
             user_id,
             session_duration_minutes,
+            purchase_event_time,
             CASE 
                 WHEN session_duration_minutes < 10 AND total_page_views <= 6 THEN 'Impulse Buyers'
                 WHEN session_duration_minutes > 60 OR total_page_views >= 12 THEN 'Heavy Browsers'
@@ -464,7 +466,9 @@ def build_marts():
             i.session_duration_minutes,
             CASE WHEN o.items_status = 'Returned' THEN 1.0 ELSE 0.0 END AS is_returned
         FROM intent_tagged i
-        JOIN '../dataset/processed/Backend_Sales_OBT.parquet' o ON i.user_id = o.user_id 
+        JOIN '../dataset/processed/Backend_Sales_OBT.parquet' o ON 
+            i.user_id = o.user_id AND
+            o.order_created_at BETWEEN (i.purchase_event_time - INTERVAL 30 MINUTE) AND (i.purchase_event_time + INTERVAL 30 MINUTE)
     )
     SELECT 
         user_intent AS User_Intent,
