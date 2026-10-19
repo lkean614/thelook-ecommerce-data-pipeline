@@ -461,23 +461,39 @@ def build_marts():
         WHERE is_purchase_session = 1
     ),
     session_with_orders AS (
-        SELECT 
-            i.user_intent,
+        SELECT
+            i.session_id, 
+            i.user_intent, 
             i.session_duration_minutes,
-            CASE WHEN o.items_status = 'Returned' THEN 1.0 ELSE 0.0 END AS is_returned
+            o.order_id, 
+            o.order_items_id,
+            CASE WHEN o.items_status = 'Returned' THEN 1 ELSE 0 END AS is_returned,
+            CASE WHEN o.items_status IN ('Complete','Returned') THEN 1 ELSE 0 END AS is_delivered,
+            o.items_status, 
+            o.order_created_at,
+            ABS(DATE_DIFF('second', i.purchase_event_time, o.order_created_at)) AS gap_sec  
         FROM intent_tagged i
-        JOIN '../dataset/processed/Backend_Sales_OBT.parquet' o ON 
-            i.user_id = o.user_id AND
-            o.order_created_at BETWEEN (i.purchase_event_time - INTERVAL 30 MINUTE) AND (i.purchase_event_time + INTERVAL 30 MINUTE)
+        JOIN '../dataset/processed/Backend_Sales_OBT.parquet' o
+        ON i.user_id = o.user_id
+        AND o.order_created_at BETWEEN i.purchase_event_time - INTERVAL 30 MINUTE
+                                    AND i.purchase_event_time + INTERVAL 30 MINUTE
+        QUALIFY ROW_NUMBER() OVER (
+            PARTITION BY o.order_items_id
+            ORDER BY ABS(DATE_DIFF('second', i.purchase_event_time, o.order_created_at))
+        ) = 1
     )
-    SELECT 
+    SELECT
         user_intent AS User_Intent,
-        AVG(is_returned) AS Return_Rate,
-        AVG(CASE WHEN session_duration_minutes < 120 THEN session_duration_minutes ELSE 120 END) AS Avg_Session_Mins,
-        COUNT(*) AS volume
+        COUNT(*)                         AS items,
+        COUNT(DISTINCT session_id)       AS sessions,
+        COUNT(DISTINCT order_id)         AS orders,
+        SUM(is_returned)                 AS returned_items,
+        SUM(is_delivered)                AS delivered_items,
+        SUM(is_returned) * 1.0 / COUNT(*)                   AS return_rate_all_items,
+        SUM(is_returned) * 1.0 / NULLIF(SUM(is_delivered), 0) AS return_rate_delivered,
+        AVG(LEAST(session_duration_minutes, 120))           AS avg_session_mins
     FROM session_with_orders
     GROUP BY user_intent
-    ORDER BY Return_Rate DESC
     """)
 
     count_mart_impulse_penalty = mart_impulse_penalty.shape[0]

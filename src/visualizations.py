@@ -63,55 +63,60 @@ def plot_logistic_return_probability(df_logistics):
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '{:.0%}'.format(y)))
     ax.set_ylim(0, 1.05)
 
-    plt.title('Non-Linear Probability of Return vs. Logistics Fulfillment Time', fontsize=14, pad=15)
+    plt.title('Fitted Probability of Return vs. Fulfilment Time (logistic regression)', fontsize=14, pad=15)
     plt.xlabel('Continuous Fulfillment Time (Hours)', fontsize=12)
     plt.ylabel('Predicted Probability of Return', fontsize=12)
     sns.despine()
     plt.tight_layout()
     plt.show()
 
-def plot_impulse_penalty(df_intent):
-    fig, ax1 = plt.subplots(figsize=(10, 6))
-    
-    sns.barplot(
-        data=df_intent, 
-        x='User_Intent', 
-        y='Return_Rate', 
-        hue='User_Intent',
-        palette=['#E67C73', '#5C6BC0', '#26A69A'], 
-        legend=False,
-        ax=ax1
-    )
 
-    ax1.yaxis.set_major_formatter(ticker.PercentFormatter(1.0))
-    ax1.set_ylim(0, df_intent['Return_Rate'].max() + 0.1)
-    ax1.set_ylabel('Return Rate (The "Penalty")', fontsize=12, weight='bold')
-    ax1.set_xlabel('User Session Intent', fontsize=12)
-    
-    for p in ax1.patches:
-        if p.get_height() > 0:
-            ax1.annotate(f'{p.get_height():.1%}', 
-                         (p.get_x() + p.get_width() / 2., p.get_height()), 
-                         ha='center', va='bottom', 
-                         fontsize=11, weight='bold', xytext=(0, 5), textcoords='offset points')
+def _wilson_ci(k, n, z=1.96):
+    """Wilson score interval for a proportion k/n."""
+    p = k / n
+    denom = 1 + z**2 / n
+    centre = (p + z**2 / (2 * n)) / denom
+    half = z * np.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / denom
+    return centre - half, centre + half
 
-    ax2 = ax1.twinx()
-    sns.pointplot(
-        data=df_intent, 
-        x='User_Intent', 
-        y='Avg_Session_Mins', 
-        color='#424242', 
-        markers='D', 
-        linestyles='--',
-        ax=ax2
-    )
 
-    ax2.set_ylabel('Avg. Decision Time (Minutes)', fontsize=12, color='#424242')
-    ax2.set_ylim(0, df_intent['Avg_Session_Mins'].max() + 30) 
+def plot_impulse_penalty(df_intent, rate_col='return_rate_delivered'):
+    """Return rate by session intent, with 95% Wilson CIs.
 
-    for i, point in enumerate(df_intent['Avg_Session_Mins']):
-        ax2.text(i, point + 5, f'{point:.1f} min', ha='center', va='bottom', fontsize=10, color='#424242')
-    plt.title('The Myth of "Impulse Penalty": Return Rate vs. Decision Time', fontsize=14, pad=15)
-    sns.despine(right=False)
+    rate_col: 'return_rate_delivered' (returned / delivered items, default)
+              or 'return_rate_all_items' (returned / all matched items).
+    """
+    order = ['Impulse Buyers', 'Targeted Searchers', 'Heavy Browsers']
+    df = df_intent.set_index('User_Intent').loc[order].reset_index()
+
+    if rate_col == 'return_rate_delivered':
+        n_col, base = 'delivered_items', 'delivered items'
+    else:
+        n_col, base = 'items', 'all items'
+
+    k = df['returned_items'].astype(float)
+    n = df[n_col].astype(float)
+    rates = k / n
+    ci = np.array([_wilson_ci(a, b) for a, b in zip(k, n)])
+    err = np.vstack([rates - ci[:, 0], ci[:, 1] - rates])
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.bar(df['User_Intent'], rates, yerr=err, capsize=6,
+           color=['#E67C73', '#5C6BC0', '#26A69A'])
+
+    for x, (r, hi) in enumerate(zip(rates, ci[:, 1])):
+        ax.annotate(f'{r:.1%}', (x, hi), textcoords='offset points',
+                    xytext=(0, 5), ha='center', fontsize=11, weight='bold')
+
+    ax.set_xticks(range(len(df)))
+    ax.set_xticklabels([
+        f"{name}\n(avg session {mins:.0f} min, n={int(cnt):,})"
+        for name, mins, cnt in zip(df['User_Intent'], df['avg_session_mins'], n)
+    ])
+    ax.yaxis.set_major_formatter(ticker.PercentFormatter(1.0))
+    ax.set_ylim(0, ci[:, 1].max() * 1.25)
+    ax.set_ylabel(f'Return rate ({base})', fontsize=12)
+    ax.set_title('Return Rate by Session Intent (95% CI)', fontsize=14, pad=15)
+    sns.despine()
     plt.tight_layout()
     plt.show()
