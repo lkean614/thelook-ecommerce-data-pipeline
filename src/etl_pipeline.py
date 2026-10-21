@@ -102,6 +102,30 @@ def clean_data():
     rel_order_items.to_parquet('../dataset/processed/clean_order_items.parquet')
     print(f"[OK] clean_order_items     : {count_order_items:,} records cleaned & saved.")
 #===========================================================================
+    # 4.2 exception_order_items
+#===========================================================================
+    exception_order_items = duckdb.sql("""
+    SELECT
+        id,
+        order_id,
+        user_id,
+        inventory_item_id,
+        status,
+        TRY_CAST(created_at AS timestamp) AS created_at,
+        TRY_CAST(shipped_at AS timestamp) AS shipped_at,
+        TRY_CAST(delivered_at AS timestamp) AS delivered_at,
+        TRY_CAST(returned_at AS timestamp) AS returned_at,
+        sale_price
+    FROM "../dataset/raw/order_items.csv"
+    WHERE 
+            created_at > returned_at or 
+            created_at > shipped_at or 
+            created_at > delivered_at
+    """)
+    count_exception_order_items = exception_order_items.shape[0]
+    exception_order_items.to_parquet('../dataset/processed/exception_order_items.parquet')
+    print(f"[OK] exception_order_items : {count_exception_order_items:,} records cleaned & saved.")
+#===========================================================================
     # 5. users
 #===========================================================================
     rel_users = duckdb.sql("""
@@ -313,7 +337,7 @@ def build_marts():
 
     count_mart_financial_summary = mart_financial_summary.shape[0]
     mart_financial_summary.to_parquet('../dataset/processed/mart_financial_summary.parquet')
-    print(f"[OK] mart_financial_summary           : {count_mart_financial_summary:,} records built & saved.")
+    print(f"[OK] mart_financial_summary          : {count_mart_financial_summary:,} records built & saved.")
 
     
 #=================================================================================
@@ -390,7 +414,7 @@ def build_marts():
 
     count_mart_logistics_experience = mart_logistics_experience.shape[0]
     mart_logistics_experience.to_parquet('../dataset/processed/mart_logistics_experience.parquet')
-    print(f"[OK] mart_logistics_experience           : {count_mart_logistics_experience:,} records built & saved.")
+    print(f"[OK] mart_logistics_experience       : {count_mart_logistics_experience:,} records built & saved.")
 
 
 #=================================================================================
@@ -427,7 +451,7 @@ def build_marts():
 
     count_mart_experimentation_base = mart_experimentation_base.shape[0]
     mart_experimentation_base.to_parquet('../dataset/processed/mart_experimentation_base.parquet')
-    print(f"[OK] mart_experimentation_base           : {count_mart_experimentation_base:,} records built & saved.")
+    print(f"[OK] mart_experimentation_base       : {count_mart_experimentation_base:,} records built & saved.")
 
 
 #=================================================================================
@@ -498,10 +522,9 @@ def build_marts():
 
     count_mart_impulse_penalty = mart_impulse_penalty.shape[0]
     mart_impulse_penalty.to_parquet('../dataset/processed/mart_impulse_penalty.parquet')
-    print(f"[OK] mart_impulse_penalty           : {count_mart_impulse_penalty:,} records built & saved.")
+    print(f"[OK] mart_impulse_penalty            : {count_mart_impulse_penalty:,} records built & saved.")
     print("-" * 70)
     print("Phase 3 Completed: All Data Marts are ready for BI reporting.")
-
 
 def main():
     print("Starting TheLook E-Commerce ETL Pipeline...")

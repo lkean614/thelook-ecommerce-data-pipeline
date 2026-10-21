@@ -9,6 +9,6 @@ __pycache__/
 *.pyc
 .env
 venv/
-
+desktop.ini
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
