@@ -120,3 +120,22 @@ def plot_impulse_penalty(df_intent, rate_col='return_rate_delivered'):
     sns.despine()
     plt.tight_layout()
     plt.show()
+
+def plot_match_gap_hist(gaps, window_hours=24, chosen=(-1, 4)):
+    """Histogram of (order created - purchase event) in hours for matched order items.
+    gaps: DataFrame with gap_hour (floor of the signed gap in hours) and items.
+    chosen: (start_h, end_h) of the window used by the mart, shaded for reference (None to skip)."""
+    fig, ax = plt.subplots(figsize=(10, 4))
+    if chosen is not None:
+        ax.axvspan(chosen[0], chosen[1], color='#26A69A', alpha=0.15,
+                   label=f'Window used in the mart ({chosen[0]}h to +{chosen[1]}h)')
+    ax.bar(gaps['gap_hour'], gaps['items'], width=0.9, align='edge', color='#5C6BC0')
+    ax.axvline(0, color='k', lw=0.8)
+    ax.set_xlabel('Order created minus purchase event (hours; negative = order created first)')
+    ax.set_ylabel('Matched order items')
+    ax.set_title(f'Time gap between purchase event and order (nearest session, within ±{window_hours}h)')
+    if chosen is not None:
+        ax.legend(frameon=False)
+    sns.despine()
+    plt.tight_layout()
+    plt.show()

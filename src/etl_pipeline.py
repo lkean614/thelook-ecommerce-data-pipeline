@@ -499,8 +499,8 @@ def build_marts():
         FROM intent_tagged i
         JOIN '../dataset/processed/Backend_Sales_OBT.parquet' o
         ON i.user_id = o.user_id
-        AND o.order_created_at BETWEEN i.purchase_event_time - INTERVAL 30 MINUTE
-                                    AND i.purchase_event_time + INTERVAL 30 MINUTE
+        AND o.order_created_at BETWEEN i.purchase_event_time - INTERVAL 1 HOUR AND 
+                                        i.purchase_event_time + INTERVAL 4 HOUR
         QUALIFY ROW_NUMBER() OVER (
             PARTITION BY o.order_items_id
             ORDER BY ABS(DATE_DIFF('second', i.purchase_event_time, o.order_created_at))

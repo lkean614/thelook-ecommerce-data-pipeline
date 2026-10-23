@@ -10,6 +10,7 @@ A batch ETL pipeline and analytics project built on the TheLook e-commerce datas
 - [Project structure](#project-structure)
 - [Pipeline](#pipeline)
 - [Dashboard](#dashboard)
+- [Dashboard insights & recommendations](#dashboard-insights--recommendations)
 - [Key findings](#key-findings)
 - [Data & Limitations](#data--limitations)
 - [How to run](#how-to-run)
@@ -34,9 +35,9 @@ A batch ETL pipeline and analytics project built on the TheLook e-commerce datas
 │   ├── etl_pipeline.py            # DuckDB ETL: clean -> OBTs -> marts
 │   └── visualizations.py          # seaborn / matplotlib chart functions
 ├── notebook/
-│   ├── 01_Behavioral_Insights.ipynb   # returns vs. fulfilment time / session intent
-|   └── 02_Data_Quality_Impact_Analysis.ipynb
-├── prototypes/                    # exploratory versions of the cleaning, OBT and mart logic
+│   ├── 01_Behavioral_Insights.ipynb           # returns vs. fulfilment time / session intent
+│   └── 02_Data_Quality_Impact_Analysis.ipynb  # effect of the timestamp cleaning on KPIs
+├── prototypes/                                # exploratory versions of the cleaning, OBT and mart logic
 │   ├── 01_data_cleaning.ipynb
 │   ├── 02_build_sales_obt.ipynb
 │   └── 03_data_marts_.ipynb
@@ -93,18 +94,31 @@ A batch ETL pipeline and analytics project built on the TheLook e-commerce datas
 ## Dashboard
 
 ![Sales & RFM dashboard](dashboards/Sales_RFM_Dashboard.png)
+- Sales KPIs and charts cover 2025-Q1 to 2026-Q4 (2026-Q4 is a partial quarter); the RFM segments cover 2026-Q1 to 2026-Q3.
+
+## Dashboard insights & recommendations
+
+The sales charts cover 2025-Q1 to 2026-Q4 (2026-Q4 is a partial quarter) and the RFM charts cover 2026-Q1 to 2026-Q3. The figures come from the cleaned data, which understates GMV by about 20% (see Limitation 3), and the dataset is synthetic, so these are ideas to test, not proven results.
+
+| What the dashboard shows | What I would do | How I would check it |
+|---|---|---|
+| GMV grew every quarter, from about 417K in 2025-Q1 to about 1.14M in 2026-Q3. The biggest jump was 2026-Q3, up 38% on 2026-Q2. | Find out what drove the 2026-Q3 jump before planning around it. | Split GMV into number of orders, items per order and price (not on the dashboard yet). |
+| Gross margin stayed between 51.3% and 52.0% in every full quarter, and the return rate between 8.2% and 9.2%. Returns were about 8–9% of GMV. | Keep both as monitored KPIs. Growth does not seem to be costing margin or returns, so I would not start a margin or returns programme from this dashboard alone. | Keep tracking them each quarter and look into any move outside the current range. |
+| Loyalists are 16% of customers but 21% of revenue. Champions and Cant Lose Them are about 12% of customers but 23% of revenue. | Protect these groups first, for example with early access or loyalty perks, and send a win-back offer to Cant Lose Them (high spenders who have not bought recently). | A/B test the offers against a control group and compare repeat purchases and spend. |
+| Potential Loyalists are the largest group (about 23% of customers) but spend less per customer (about $62 vs about $80 overall, net revenue per customer over the three quarters). | Try to move them up to Loyalists, for example with a follow-up offer after the first purchase. | A/B test the offer and compare repeat purchases and spend. |
+| Hibernating / Lost and Lost Bargain Hunters are about 9% of customers but only 2% of revenue. | Give them low priority for retention spending, at most a cheap automated email. | Compare the cost of the email with the revenue it brings back. |
 
 ## Key findings
 
 These are descriptive results on a synthetic dataset. Findings 1, 2 and 4 are simple descriptive summaries; finding 3 shows approximate 95% intervals but no formal hypothesis test or adjustment for other factors.
 
-**1. Sales grew steadily and returns grew in line with sales.** Quarterly GMV rose every quarter from about 417K in 2025-Q1 to about 1.14M in 2026-Q3 (cleaned data, which understates GMV by about 20%, see Limitation 3; 2026-Q4 is a partial quarter). Gross margin stayed at about 51–52% in every full quarter. The all-items return rate stayed between 8.2% and 9.2% per quarter (8.8% overall for 2025-Q1 to 2026-Q4), and return amount stayed at about 8–9% of GMV, so returns grew in line with sales rather than faster.
+**1. Sales grew steadily and returns grew in line with sales.** Between Q1 2025 and Q1 2026, quarterly GMV has surged from 417k up to 1.14m (273%) and net revenue from 300k up to 829k(276%) in a year(cleaned data, which understates GMV by about 20%, see Limitation 3; 2026-Q4 is a partial quarter). Gross margin stayed at about 51–52% in every full quarter. However, these significant growth was accompanied by an undesirable increase, the return rate increased by about 0.06% in this period(stayed at about 8-9% in every full quarter), so returns grew in line with sales rather than faster.
 
-**2. No visible link between fulfilment time and returns.** The order-level return rate stays within about 28–30% across fulfilment-time bins from under 24 hours to over 120 hours (`plot_logistics_trend`). In this dataset, slower fulfilment is not associated with more returns. This is a descriptive comparison with no significance test and no adjustment for other factors.
+**2. No visible link between fulfilment time and returns.** The order-level return rate stays within about 27–30% across fulfilment-time bins from under 24 hours to over 120 hours (`plot_logistics_trend`). In this dataset, slower fulfilment is not associated with more returns. This is a descriptive comparison with no significance test and no adjustment for other factors.
 
-**4. Customer segments (RFM).** For 2026-Q1 to 2026-Q3, Potential Loyalists are the largest segment (about a third of users and about 25.7% of revenue, net of returned and cancelled items), followed by Loyalists, At Risk and the catch-all "Others" segment. Champions and Cant Lose Them together are about 14% of users but about 27.5% of revenue. The segment rules are coarse (see Limitation 6), so these are descriptive groupings. Whether retention campaigns aimed at At Risk customers would pay off is a hypothesis for future testing, not a result of this project.
+**3. Session intent vs. returns: no difference among delivered items.** Purchase sessions are matched to order items by user and a window from 1 hour before to 4 hours after the purchase event; this matches 118,120 of the 145,577 order items in the cleaned data (81.1%) and 102,847 of 181,466 purchase sessions (56.7%). For the delivered items(the only ones that can be returned), we noticed that the return rate have no a significant different across segments: 28.8% for Impulse Buyers (n = 30,002), 29.0% for Targeted Searchers (n = 6,872) and 28.3% for Heavy Browsers (n = 2,553) with overlapping approximate 95% intervals. However, the all items are msuh more different than delivered items by counting the rates differ (10.1%, 8.8% and 7.2%), but only because a smaller share of items reached delivery in the browsing-heavy segments (35.1%, 30.4% and 25.5%), not because delivered items were returned less often. Sessions in the Heavy Browsers segment also contain much more items (2.7 per session vs 1.0 for Impulse Buyers), so the segments largely reflect basket size. This is an observational comparison with no adjustment for product mix, and it does not show that browsing affects returns (see Limitation 5).
 
-**4. Customer segments (RFM).** Potential Loyalists are the largest segment by both users and revenue, followed by At Risk (by revenue) and New Customers (by users). The segment rules are coarse (see [Limitations](#data--limitations)), so these are descriptive groupings. Whether retention campaigns aimed at At Risk customers would pay off is a hypothesis for future testing, not a result of this project.
+**4. Customer segments (RFM).** I scored customers on recency, frequency and spend for each quarter and looked at 2026-Q1 to 2026-Q3. Potential Loyalists are the biggest group (about 23% of customers), but they bring in only about 18% of revenue. Loyalists are 16% of customers and 21% of revenue, so they bring in the most. Champions and Cant Lose Them are only about 12% of customers but 23% of revenue, while Hibernating / Lost and Lost Bargain Hunters are 9% of customers and 2% of revenue. The segment rules are rough (see Limitation 6), so I treat this as a description of the customer base, not as proof that a campaign would work.
 
 ## Data & Limitations
 
@@ -120,9 +134,9 @@ These are descriptive results on a synthetic dataset. Findings 1, 2 and 4 are si
 1. **Synthetic data.** Patterns, including the "no effect" results above, reflect how the data was generated and may not hold in real business data.
 2. **Descriptive, not causal.** There is no randomisation, formal hypothesis testing or adjustment for confounders. The 95% intervals shown are approximate and treat items as independent. Group differences should not be read as causal effects. `traffic_source` is an acquisition channel, not an experiment arm, and `mart_experimentation_base` is only a baseline table.
 3. **Timestamp cleaning removes 19.8% of order items.** 35,889 of 181,466 order items (145,577 kept) are dropped because a shipped, delivered or returned timestamp is earlier than the item's `created_at`, which would give negative fulfilment times. The rule only hits items that have shipped: about 30% of Shipped, Complete and Returned items are dropped, and no Processing or Cancelled items are, so Processing and Cancelled items rise from 35% to 44% of the cleaned data. Compared with the raw data, the cleaned data understates GMV by 19.7% and net revenue by 22.1%, and the all-items return rate falls from 10.1% to 8.8%. The return rate among delivered items is essentially unchanged (28.8% raw vs 28.7% cleaned) because Complete and Returned items are dropped at almost the same rate (30.2% vs 30.4%). 20,557 orders (16.4%) lose at least one item: 7,852 are removed entirely and 12,705 keep only some of their items, so AOV (86.25 raw vs 73.91 cleaned) and items per order (1.45 vs 1.24) are each understated by about 14%. See `notebook/02_Data_Quality_Impact_Analysis.ipynb`.
-4. **Return-rate figures use different denominators.** Only items that reach delivery can be returned, so rates based on delivered items (about 26–29% in the impulse mart, about 28–30% at order level in the logistics mart) are much higher than rates based on all items (about 7–10% in the impulse mart, and 8.2–9.2% per quarter in the financial mart and dashboard, which use the cleaned data; the raw all-items rate is 10.1%, see Limitation 3). See [Metric definitions](#pipeline).
-5. **Session-to-order matching is loose.** The event data has no order key, so purchase sessions are matched to items by user and a ±30-minute window around the purchase event, keeping the closest session per item. Only 9.1% of purchase sessions (16,446 of 181,466) match an order, and the matched time gaps are spread across the window (median about 10–12 minutes) rather than clustered near zero. Results describe this matched subset only. The segment thresholds (10 / 60 minutes, 6 / 12 page views) are arbitrary.
-6. **RFM is heuristic.** Scores are computed per user per quarter, so most users have a single order and frequency scores are weakly informative. "Potential Loyalists" and the final "Others" segment are broad catch-all rules, and "New Customers" is defined by recency plus one order in the quarter, not by first-order date. Cancelled and returned items are excluded from the monetary value.
+4. **Return-rate figures use different denominators.** Only items that reach delivery can be returned, so rates based on delivered items (about 28–29% in the impulse mart, about 28–30% at order level in the logistics mart) are much higher than rates based on all items (about 7–10% in the impulse mart, and 8.2–9.2% per quarter in the financial mart and dashboard, which use the cleaned data; the raw all-items rate is 10.1%, see Limitation 3). See [Metric definitions](#pipeline).
+5. **Session-to-order matching is approximate.** The event data has no order key, so purchase sessions are matched to order items by user and a window from 1 hour before to 4 hours after the purchase event, keeping the closest session per item. Most matched orders are created 0 to 4 hours after the purchase event (see the diagnostics at the end of `notebook/01_Behavioral_Insights.ipynb`), so this window covers the main block of time gaps: it matches 118,120 of the 145,577 order items in the cleaned data (81.1%) and 102,847 of 181,466 purchase sessions (56.7%). Sessions whose items were removed by the timestamp cleaning (Limitation 3) cannot be matched. A separate group of about 15,600 items has orders created 20.5 to 24 hours before the purchase event, which looks like a timestamp artifact and is excluded. The segment thresholds (10 / 60 minutes, 6 / 12 page views) are arbitrary.
+6. **RFM is heuristic.** Scores are computed per user per quarter, so most users have a single order and frequency scores are weakly informative. "Potential Loyalists" and the final "Others" segment are broad catch-all rules, and "New Customers" is defined by recency plus one order in the quarter, not by first-order date. Cancelled and returned items are excluded from the monetary value. Because scores are computed per quarter, the same customer can fall into different segments in different quarters, so segment counts overlap slightly.
 7. **Incomplete latest quarter.** The final quarter in the snapshot is partial.
 8. **Anonymous traffic.** In the EDA snapshot, about 46% of events (roughly 1.1M of 2.4M) have no `user_id`. They are mapped to `0` and excluded from user-level marts such as `mart_experimentation_base`.
 
@@ -157,12 +171,16 @@ cd src
 python etl_pipeline.py
 ```
 
-This writes the clean tables, the two OBTs and the five marts to `dataset/processed/` and prints row counts for each step.
+This writes the clean tables (plus `exception_order_items`), the two OBTs and the five marts to `dataset/processed/` and prints row counts for each step.
 
 **4. Explore the results**
 
-- Open `notebook/01_Behavioral_Insights.ipynb` with the `notebook/` folder as the working directory (the default in Jupyter and VS Code). It reads the marts from `../dataset/processed/` and uses the chart functions in `src/visualizations.py`:
-- Open `notebook/02_Data_Quality_Impact_Analysis.ipynb` with the `notebook/` folder as the working directory (the default in Jupyter and VS Code). It reads the marts from `../dataset/processed/`
+Open the notebooks with the `notebook/` folder as the working directory (the default in Jupyter and VS Code):
+
+- `notebook/01_Behavioral_Insights.ipynb` reads the marts from `../dataset/processed/` and uses the chart functions in `src/visualizations.py`.
+- `notebook/02_Data_Quality_Impact_Analysis.ipynb` reads the raw CSVs from `../dataset/raw/` and the clean tables and marts from `../dataset/processed/`.
+
+Example of using the chart functions:
 
 ```python
 import os, sys
@@ -179,7 +197,7 @@ The notebooks in `prototypes/` also use `../dataset/...` paths and need the same
 
 ## Planned improvements
 
-- Improve session-to-order matching (current match rate: 9.1%).
+- Compare session-intent segments within order-size groups (for example single-item orders only), since the segments largely reflect basket size.
 - Add formal significance tests (with standard errors clustered by user) and adjust for covariates such as product category, order size and customer attributes; extend confidence intervals to the other comparisons.
 - Quantify the effect of the timestamp cleaning (before/after comparison of GMV and return rate).
 - Look at multi-warehouse split shipments (`total_dc > 1`) as a follow-up question.
