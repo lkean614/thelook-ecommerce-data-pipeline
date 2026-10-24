@@ -40,7 +40,7 @@ def plot_logistics_trend(df_logistics):
     for i, point in enumerate(return_rates['return_flag']):
         ax.text(i, point + 0.002, f'{point:.1%}', ha='center', va='bottom', fontsize=10)
 
-    plt.title('The Impact of Logistics Fulfillment Time on Return Rates', fontsize=14, pad=15)
+    plt.title('Return Rate by Fulfilment Time', fontsize=14, pad=15)
     plt.xlabel('Fulfillment Time (Hours)', fontsize=12)
     plt.ylabel('Return Rate', fontsize=12, weight='bold')
     sns.despine()
